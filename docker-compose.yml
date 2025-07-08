@@ -1,0 +1,190 @@
+version: '3.8'
+
+services:
+  # Database Principal
+  postgres:
+    image: postgres:15-alpine
+    container_name: vizinho_postgres
+    environment:
+      POSTGRES_DB: vizinho_virtual
+      POSTGRES_USER: vizinho_admin
+      POSTGRES_PASSWORD: VizinhoSecure2024!
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - vizinho_network
+
+  # Cache Redis
+  redis:
+    image: redis:7-alpine
+    container_name: vizinho_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - vizinho_network
+
+  # Message Queue
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: vizinho_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: vizinho
+      RABBITMQ_DEFAULT_PASS: VizinhoQueue2024!
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - vizinho_network
+
+  # API Gateway
+  api_gateway:
+    build:
+      context: ./backend/api-gateway
+      dockerfile: Dockerfile
+    container_name: vizinho_api_gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - vizinho_network
+
+  # User Management Service
+  user_service:
+    build:
+      context: ./backend/services/user-management
+      dockerfile: Dockerfile
+    container_name: vizinho_user_service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://vizinho_admin:VizinhoSecure2024!@postgres:5432/vizinho_virtual
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=VizinhoJWTSecret2024SuperSecure!
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - vizinho_network
+
+  # Building Management Service
+  building_service:
+    build:
+      context: ./backend/services/building-management
+      dockerfile: Dockerfile
+    container_name: vizinho_building_service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://vizinho_admin:VizinhoSecure2024!@postgres:5432/vizinho_virtual
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - vizinho_network
+
+  # Financial Service
+  financial_service:
+    build:
+      context: ./backend/services/financial
+      dockerfile: Dockerfile
+    container_name: vizinho_financial_service
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://vizinho_admin:VizinhoSecure2024!@postgres:5432/vizinho_virtual
+      - REDIS_URL=redis://redis:6379
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - MULTIBANCO_API_KEY=${MULTIBANCO_API_KEY}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - vizinho_network
+
+  # Communication Service
+  communication_service:
+    build:
+      context: ./backend/services/communication
+      dockerfile: Dockerfile
+    container_name: vizinho_communication_service
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://vizinho_admin:VizinhoSecure2024!@postgres:5432/vizinho_virtual
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://vizinho:VizinhoQueue2024!@rabbitmq:5672
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - vizinho_network
+
+  # Frontend React App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vizinho_frontend
+    ports:
+      - "3100:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:3000/api
+      - REACT_APP_WS_URL=ws://localhost:3000
+    depends_on:
+      - api_gateway
+    networks:
+      - vizinho_network
+
+  # Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: vizinho_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - vizinho_network
+
+  # Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: vizinho_grafana
+    ports:
+      - "3200:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=VizinhoGrafana2024!
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - vizinho_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  vizinho_network:
+    driver: bridge

@@ -1,0 +1,59 @@
+{
+  "name": "vizinho-virtual",
+  "version": "1.0.0",
+  "description": "SaaS completo para gestão de condomínios - Portugal, Europa, Brasil, América do Norte",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:local": "node scripts/dev-local.js start",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "setup": "node scripts/setup.js",
+    "setup:local": "node scripts/setup-local.js",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "build": "cd frontend && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "migrate": "cd backend && npm run migrate",
+    "seed": "cd backend && npm run seed",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "status": "node scripts/dev-local.js status",
+    "clean": "node scripts/dev-local.js clean",
+    "help": "node scripts/dev-local.js help"
+  },
+  "keywords": [
+    "saas",
+    "condominio",
+    "gestao",
+    "portugal",
+    "sindico",
+    "moradores",
+    "marketplace",
+    "assembleia",
+    "financeiro"
+  ],
+  "author": "Vizinho Virtual Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
+}
